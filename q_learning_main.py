@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 space_compass = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
 space_turn    = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
-space_pixel   = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 256]
+#space_pixel   = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 256]
+space_pixel = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250]
 
 # return [pos,val] for value in space
 def discretize(value,space):
@@ -20,11 +21,13 @@ def discretize(value,space):
     #print ("return",[pos,space[pos]])
     return [pos,space[pos]]
 
-def plot_stats(angles, rewards):
-    plt.subplot(211)
+def plot_stats(angles, rewards, net_rewards):
+    plt.subplot(311)
     plt.plot(angles)
-    plt.subplot(212)
+    plt.subplot(312)
     plt.plot(rewards)
+    plt.subplot(313)
+    plt.plot(net_rewards)
     plt.show()
 
 #logging.basicConfig(level=logging.DEBUG)
@@ -41,7 +44,7 @@ print("--------------Q-value------------",Q)
 
 # 2. Parameters of Q-learning
 eta = .628
-gma = .9
+gma = 1.0
 epis = 10
 MAX_STEPS = 1500
 rev_list = [] # rewards per episode calculate
@@ -49,6 +52,7 @@ rev_list = [] # rewards per episode calculate
 # 3. Q-learning Algorithm
 rewards = []
 angles = []
+net_rewards = []
 for i in range(0,epis):
     # Reset environment
     obs = env.reset()
@@ -121,7 +125,8 @@ for i in range(0,epis):
         print("[{},{}] Reward: {:+09.4f} Total reward: {:+09.4f}".format(i,j, reward, net_reward))
 
         if j > MAX_STEPS:
+            net_rewards.append(net_reward)
             print ("I m done")
             break
     print("--------------Q-value------------",Q)
-plot_stats(angles, rewards)
+plot_stats(angles, rewards, net_rewards)
