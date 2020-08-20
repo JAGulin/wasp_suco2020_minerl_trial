@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 space_compass = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
 space_turn    = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
+space_pixel   = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 256]
 
 # return [pos,val] for value in space
 def discretize(value,space):
@@ -28,11 +29,13 @@ def plot_stats(angles, rewards):
 
 #logging.basicConfig(level=logging.DEBUG)
 
+def q_index(s, r, g, b):
+    return s*len(space_pixel)*len(space_pixel)*len(space_pixel) + r*len(space_pixel)*len(space_pixel) + g*len(space_pixel) + b
 
 # 1. Load Environment and Q-table structure
 env = gym.make('MineRLNavigateDense-v0')
 
-Q = np.zeros([len(space_compass),len(space_turn)])
+Q = np.zeros([len(space_compass)*len(space_pixel)*len(space_pixel)*len(space_pixel),len(space_turn)])
 # env.obeservation.n, env.action_space.n gives number of states and action in env loaded
 print("--------------Q-value------------",Q)
 
@@ -59,6 +62,9 @@ for i in range(0,epis):
     #print ("Space_compass",space_compass)
     #print ("----------------compass------------")
     s,compass = discretize(obs["compassAngle"],space_compass)
+    r,_ = discretize(obs["pov"][32, 32, 0],space_pixel)
+    g,_ = discretize(obs["pov"][32, 32, 1],space_pixel)
+    b,_ = discretize(obs["pov"][32, 32, 2],space_pixel)
 
 # The Q-Table learning algorithm
     j = 0
@@ -66,7 +72,7 @@ for i in range(0,epis):
         j+=1
 
         # Choose action from Q table
-        a = np.argmax(Q[s,:])   # index of the maximum deemed reward
+        a = np.argmax(Q[q_index(s,r,g,b),:])   # index of the maximum deemed reward
         turn = space_turn[a]
 
         # Mostly Ignore Q for early action
@@ -99,9 +105,12 @@ for i in range(0,epis):
 
         # Reduce state space
         s1,compass1 = discretize(obs["compassAngle"],space_compass)
+        r1,_ = discretize(obs["pov"][32, 32, 0],space_pixel)
+        g1,_ = discretize(obs["pov"][32, 32, 1],space_pixel)
+        b1,_ = discretize(obs["pov"][32, 32, 2],space_pixel)
 
         #Update Q-Table with new knowledge
-        Q[s,a] = Q[s,a] + eta*(reward + gma*np.max(Q[s1,:]) - Q[s,a])
+        Q[q_index(s,r,g,b),a] = Q[q_index(s,r,g,b),a] + eta*(reward + gma*np.max(Q[q_index(s1,r1,g1,b1),:]) - Q[q_index(s,r,g,b),a])
         s = s1
         compass = compass1
 
@@ -109,11 +118,10 @@ for i in range(0,epis):
         rewards.append(net_reward)
         angles.append(obs['compassAngle'])
         ### print("Total reward: ", net_reward)
-        print("[{},{}] Reward: {} Total reward: {}".format(i,j, reward, net_reward))
+        print("[{},{}] Reward: {:+09.4f} Total reward: {:+09.4f}".format(i,j, reward, net_reward))
 
         if j > MAX_STEPS:
             print ("I m done")
             break
     print("--------------Q-value------------",Q)
 plot_stats(angles, rewards)
-
