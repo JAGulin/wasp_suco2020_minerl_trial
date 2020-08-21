@@ -5,8 +5,22 @@ import random
 import matplotlib.pyplot as plt
 
 import numpy as np
+
 space_compass = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
 space_turn    = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
+q_file = 'Qvalue.csv'
+
+# Load experience (Q) from prepared experiments
+def load_experience(file, Q = None):
+    data = np.loadtxt(file, delimiter=',')
+    # TODO: Assert that data matches Q size.
+    # TODO: If file is missing, print error, return Q instead
+    return data
+
+# Store experience (Q) for later re-use
+def save_experience(file, Q):
+    np.savetxt(file, Q, delimiter=',')
+    return file
 
 # return [pos,val] for value in space
 def discretize(value,space):
@@ -36,6 +50,10 @@ Q = np.zeros([len(space_compass),len(space_turn)])
 # env.obeservation.n, env.action_space.n gives number of states and action in env loaded
 print("--------------Q-value------------",Q)
 
+# Loading previous experience
+Q = load_experience(q_file, Q)
+print(Q)
+
 # 2. Parameters of Q-learning
 eta = .628
 gma = .9
@@ -51,6 +69,7 @@ for i in range(0,epis):
     obs = env.reset()
     done = False
     net_reward = 0
+    max_net_reward = float('-inf')
     rewards = []
     angles = []
 
@@ -106,14 +125,22 @@ for i in range(0,epis):
         compass = compass1
 
         net_reward += reward
+        if net_reward > max_net_reward:
+            max_net_reward = net_reward
+    
         rewards.append(net_reward)
         angles.append(obs['compassAngle'])
         ### print("Total reward: ", net_reward)
-        print("[{},{}] Reward: {} Total reward: {}".format(i,j, reward, net_reward))
+
+        print("[{},{}] Reward: {} Total: {} (of {})".format(i,j, reward, net_reward, max_net_reward))
 
         if j > MAX_STEPS:
-            print ("I m done")
+            print ("Aborting at MAX_STEPS!")
             break
-    print("--------------Q-value------------",Q)
-plot_stats(angles, rewards)
+    #print("--------------Q-value------------",Q)
+    q_file = save_experience(q_file,Q)
 
+data = load_experience(q_file, Q)
+print(data)
+
+plot_stats(angles, rewards)
