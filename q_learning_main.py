@@ -51,7 +51,11 @@ Q = np.zeros([len(space_compass),len(space_turn)])
 print("--------------Q-value------------",Q)
 
 # Loading previous experience
-Q = load_experience(q_file, Q)
+try:
+  Q = load_experience(q_file, Q)
+except:
+  print("An exception occurred: No Q found") 
+
 print(Q)
 
 # 2. Parameters of Q-learning
