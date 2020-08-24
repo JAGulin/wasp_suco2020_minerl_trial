@@ -5,10 +5,16 @@ import random
 import matplotlib.pyplot as plt
 
 import numpy as np
-space_compass = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
-space_turn    = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
+from numpy import savetxt
+from numpy import loadtxt
+from os import path
+
+#space_compass = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
+#space_turn    = [0,1,-1,2,-2,3,-3,4,-4,6,-6,10,-10,20,-20,45,-45,90,-90,120,-120,170,-170,180,-180]
 #space_pixel   = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 256]
-space_pixel = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250]
+space_turn = [0,1,-1,3,-3,6,-6,10,-10]
+space_compass = [0,2,-2,5,-5,10,-10,20,-20,45,-45,90,-90,160,-160]
+space_pixel = [0, 80, 160, 250]
 
 # return [pos,val] for value in space
 def discretize(value,space):
@@ -39,20 +45,37 @@ def q_index(s, r, g, b):
 env = gym.make('MineRLNavigateDense-v0')
 
 Q = np.zeros([len(space_compass)*len(space_pixel)*len(space_pixel)*len(space_pixel),len(space_turn)])
+
+if path.exists('Qvalue.csv'):
+    Q = loadtxt('Qvalue.csv', delimiter=',')
 # env.obeservation.n, env.action_space.n gives number of states and action in env loaded
 print("--------------Q-value------------",Q)
 
 # 2. Parameters of Q-learning
 eta = .628
-gma = 1.0
-epis = 10
+gma = 0.9
+epis = 1000
 MAX_STEPS = 1500
 rev_list = [] # rewards per episode calculate
 
-# 3. Q-learning Algorithm
 rewards = []
 angles = []
 net_rewards = []
+
+# # Q-learn on examples first
+# data = minerl.data.make('MineRLNavigateDense-v0')
+# for current_state, action, reward, next_state, done \
+#     in data.batch_iter(batch_size=1, num_epochs=1, seq_len=1):
+#         s,compass = discretize(current_state['compassAngle'][0],space_compass)
+#         r,_ = discretize(current_state["pov"][0][0, 32, 32, 0],space_pixel)
+#         g,_ = discretize(current_state["pov"][0][0, 32, 32, 1],space_pixel)
+#         b,_ = discretize(current_state["pov"][0][0, 32, 32, 2],space_pixel)
+#
+#         a,turn = discretize(turn,space_turn)
+#
+#         Q[q_index(s,r,g,b),action] = Q[q_index(s,r,g,b),a] + eta*(reward + gma*np.max(Q[q_index(s1,r1,g1,b1),:]) - Q[q_index(s,r,g,b),a])
+
+# 3. Q-learning Algorithm
 for i in range(0,epis):
     # Reset environment
     obs = env.reset()
@@ -84,8 +107,8 @@ for i in range(0,epis):
 
         # Modify action to get exploration
         noise = 0
-        if random.random() < 0.25:
-            noise = (random.random()*2-1)*180
+        if random.random() < 0.05:
+            noise = (random.random()*2-1)*90
         turn = turn+noise
         # Make sure a is in [-180,180] range
         turn = ((180+turn)%360)-180
@@ -116,6 +139,9 @@ for i in range(0,epis):
         #Update Q-Table with new knowledge
         Q[q_index(s,r,g,b),a] = Q[q_index(s,r,g,b),a] + eta*(reward + gma*np.max(Q[q_index(s1,r1,g1,b1),:]) - Q[q_index(s,r,g,b),a])
         s = s1
+        r = r1
+        g = g1
+        b = b1
         compass = compass1
 
         net_reward += reward
@@ -125,8 +151,9 @@ for i in range(0,epis):
         print("[{},{}] Reward: {:+09.4f} Total reward: {:+09.4f}".format(i,j, reward, net_reward))
 
         if j > MAX_STEPS:
-            net_rewards.append(net_reward)
             print ("I m done")
             break
     print("--------------Q-value------------",Q)
+    net_rewards.append(net_reward)
+    savetxt('Qvalue.csv',Q, delimiter=',')
 plot_stats(angles, rewards, net_rewards)
